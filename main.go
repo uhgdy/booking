@@ -23,7 +23,7 @@ func main() {
 		},
 		JWT: config.JWTConfig{
 			SecretKey: "supersecretkey",
-			ExpiresIn: 2 * time.Minute,
+			ExpiresIn: 2 * time.Hour,
 		},
 		Server: config.ServerConfig{
 			Port: ":8080",
@@ -76,11 +76,11 @@ func main() {
 		// Маршрут получения данных профиля
 		protected.GET("/profile", func(c *gin.Context) {
 			userID := c.MustGet(string(domain.ContextUserIDKey)).(int)
-			roleID := c.MustGet(string(domain.ContextRoleIDKey)).(int)
+			roles := c.MustGet(string(domain.ContextRolesKey)).([]int)
 
 			c.JSON(http.StatusOK, gin.H{
 				"user_id": userID,
-				"role_id": roleID,
+				"roles":   roles,
 			})
 		})
 	}

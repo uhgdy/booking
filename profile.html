@@ -28,7 +28,7 @@
                 const data = await response.json();
                 document.getElementById('profileData').innerHTML = `
                     <p>ID пользователя: ${data.user_id}</p>
-                    <p>ID роли: ${data.role_id}</p>
+                    <p>ID роли: ${data.roles}</p>
                 `;
             } else {
                 window.location.href = '/login.html';

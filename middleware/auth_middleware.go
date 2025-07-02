@@ -60,15 +60,37 @@ func AuthMiddleware(jwtSecret string) gin.HandlerFunc {
 			return
 		}
 
-		roleID, ok := claims["role_id"].(float64)
+		// Обработка ролей
+		rolesClaim, ok := claims["roles"]
 		if !ok {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid role ID in token"})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Roles claim is required"})
+			return
+		}
+
+		var roles []int
+
+		// Обрабатываем разные форматы ролей
+		switch v := rolesClaim.(type) {
+		case []interface{}:
+			for _, role := range v {
+				if roleID, ok := role.(float64); ok {
+					roles = append(roles, int(roleID))
+				}
+			}
+		case []float64:
+			for _, roleID := range v {
+				roles = append(roles, int(roleID))
+			}
+		case float64:
+			roles = append(roles, int(v))
+		default:
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid roles format"})
 			return
 		}
 
 		// Добавляем в контекст
 		c.Set(string(domain.ContextUserIDKey), int(userID))
-		c.Set(string(domain.ContextRoleIDKey), int(roleID))
+		c.Set(string(domain.ContextRolesKey), roles)
 
 		c.Next()
 	}

@@ -34,7 +34,7 @@ func (s *AuthService) Authenticate(login, password string) (*domain.TokenRespons
 	// создание токена
 	claims := &jwt.MapClaims{
 		"user_id": user.ID,
-		"role_id": user.RoleID,
+		"roles":   user.Roles,
 		"exp":     time.Now().Add(s.jwtCfg.ExpiresIn).Unix(),
 	}
 

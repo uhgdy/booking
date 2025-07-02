@@ -16,7 +16,7 @@ type contextKey string
 
 const (
 	ContextUserIDKey contextKey = "user_id"
-	ContextRoleIDKey contextKey = "role_id"
+	ContextRolesKey  contextKey = "roles"
 )
 
 // JWT конфигурация
@@ -29,7 +29,7 @@ type User struct {
 	ID       int
 	Login    string
 	Password string
-	RoleID   int
+	Roles    []int
 }
 
 type LoginInput struct {

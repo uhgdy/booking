@@ -1,0 +1,46 @@
+package handlers
+
+import (
+	"auth_project/domain"
+	"auth_project/middleware"
+	"auth_project/service"
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+)
+
+type AuthHandler struct {
+	authService *service.AuthService
+	jwtSecret   string
+}
+
+func NewAuthHandler(authService *service.AuthService, jwtSecret string) *AuthHandler {
+	return &AuthHandler{
+		authService: authService,
+		jwtSecret:   jwtSecret,
+	}
+}
+
+func (h *AuthHandler) Login(c *gin.Context) {
+	// 1. Парсинг входных данных
+	var input domain.LoginInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format"})
+		return
+	}
+
+	// 2. Аутентификация через сервис
+	token, err := h.authService.Authenticate(input.Login, input.Password)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
+		return
+	}
+
+	// 3. Успешный ответ с токеном
+	c.JSON(http.StatusOK, token)
+}
+
+// возвращает middleware для аутентификации токена
+func (h *AuthHandler) GetAuthMiddleware() gin.HandlerFunc {
+	return middleware.AuthMiddleware(h.jwtSecret)
+}

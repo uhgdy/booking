@@ -8,7 +8,6 @@ import (
 	"auth_project/service"
 	"context"
 	"log"
-	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -16,77 +15,61 @@ import (
 )
 
 func main() {
-	// Конфигурация
+	// 1. Конфиг
 	cfg := config.Config{
-		DB: config.DBConfig{
-			DSN: "postgres://ksvistunova:@localhost:5432/booking_system",
-		},
+		DB: config.DBConfig{DSN: "postgres://ksvistunova:@localhost:5432/booking_system"},
 		JWT: config.JWTConfig{
 			SecretKey: "supersecretkey",
 			ExpiresIn: 2 * time.Hour,
 		},
-		Server: config.ServerConfig{
-			Port: ":8080",
-		},
+		Server: config.ServerConfig{Port: ":8080"},
 	}
 
-	// Инициализация БД
+	// 2. Подключение к БД
 	db, err := pgxpool.New(context.Background(), cfg.DB.DSN)
 	if err != nil {
 		log.Fatalf("Ошибка подключения к базе: %v", err)
 	}
 	defer db.Close()
 
-	// Инициализация репозиториев
+	// 3. Репозиторий
 	userRepo := postgres.NewUserRepository(db)
 
-	// Инициализация сервисов
-	authService := service.NewAuthService(userRepo, &domain.JWTConfig{
-		SecretKey: cfg.JWT.SecretKey,
-		ExpiresIn: cfg.JWT.ExpiresIn,
-	})
+	// 4. Сервис (сюда userRepo уже вписывается без ошибок)
+	authService := service.NewAuthService(
+		userRepo,
+		&domain.JWTConfig{
+			SecretKey: cfg.JWT.SecretKey,
+			ExpiresIn: cfg.JWT.ExpiresIn,
+		},
+	)
 
-	// Инициализация обработчиков
+	// 5. Хэндлер
 	authHandler := handlers.NewAuthHandler(authService, cfg.JWT.SecretKey)
 
-	// Настройка маршрутов
+	// 6. Маршрутизация
 	router := gin.Default()
 
-	router.GET("/", func(c *gin.Context) {
-		c.File("./login.html")
-	})
+	// 6.1. Статика
+	router.GET("/", func(c *gin.Context) { c.File("./login.html") })
+	router.GET("/login", func(c *gin.Context) { c.File("./login.html") })
+	router.GET("/profile", func(c *gin.Context) { c.File("./profile.html") })
+	router.GET("/profile.html", func(c *gin.Context) { c.File("./profile.html") })
 
-	router.GET("/login", func(c *gin.Context) {
-		c.File("./login.html")
-	})
-
-	router.GET("/profile", func(c *gin.Context) {
-		c.File("./profile.html")
-	})
-	router.GET("/profile.html", func(c *gin.Context) {
-		c.File("./profile.html")
-	})
-
+	// 6.2. Публичный API
 	router.POST("/api/login", authHandler.Login)
+	router.POST("/api/register", authHandler.Register)
 
-	// для апи которые требуют авторизации
+	// 6.3. Защищённый API
 	protected := router.Group("/api")
 	protected.Use(authHandler.GetAuthMiddleware())
 	{
-		// Маршрут получения данных профиля
-		protected.GET("/profile", func(c *gin.Context) {
-			userID := c.MustGet(string(domain.ContextUserIDKey)).(int)
-			roles := c.MustGet(string(domain.ContextRolesKey)).([]int)
-
-			c.JSON(http.StatusOK, gin.H{
-				"user_id": userID,
-				"roles":   roles,
-			})
-		})
+		protected.GET("/profile", authHandler.Profile)
+		protected.GET("/status", authHandler.Status)
 	}
 
-	// Запуск сервера
-	log.Printf("Сервер стартанул, порт: %s", cfg.Server.Port)
+	// 7. Запуск
+	log.Printf("Сервер запущен на порту %s", cfg.Server.Port)
 	if err := router.Run(cfg.Server.Port); err != nil {
 		log.Fatalf("Ошибка старта сервера: %v", err)
 	}

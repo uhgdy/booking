@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+    
     <title>Профиль</title>
     <style>
         body { font-family: Arial; max-width: 400px; margin: 0 auto; padding: 20px; }
@@ -8,10 +9,10 @@
     </style>
 </head>
 <body>
+    <div id="profile-info"></div>
+    
     <h2>Профиль</h2>
     <div id="profileData">Загрузка...</div>
-    <!-- <button onclick="logout()">Выйти</button>-->
-
     <script>
         async function loadProfile() {
             const token = localStorage.getItem('token');
@@ -41,6 +42,37 @@
         }
 
         loadProfile();
+    </script>
+    <button id="logout-btn">Выйти</button>
+    <script>
+      // При загрузке страницы сразу пытаемся запросить профиль
+      (async () => {
+        const token = localStorage.getItem('token');
+        if (!token) { window.location = '/'; return; }
+  
+        const res = await fetch('/api/profile', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.status !== 200) {
+          // Если токен не валиден — тоже сбрасываем
+          localStorage.removeItem('token');
+          window.location = '/';
+          return;
+        }
+        const { user_id, roles } = await res.json();
+        document.getElementById('profile-info').innerHTML = `
+            <p>ID пользователя: ${data.user_id}</p>
+            <p>ID роли: ${data.roles}</p>
+        `;
+      })();
+  
+      // Обработчик logout
+      document.getElementById('logout-btn').addEventListener('click', () => {
+        // Удаляем токен
+        localStorage.removeItem('token');
+        // Перенаправляем на страницу логина
+        window.location = '/';
+      });
     </script>
 </body>
 </html>
